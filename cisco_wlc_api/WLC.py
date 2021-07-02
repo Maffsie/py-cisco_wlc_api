@@ -48,9 +48,17 @@ class CiscoWLCAPI:
     def clients(self):
         count = self.client_count
         # TODO: this should iterate through the JSON array and generate Client objects for each client
+        # TODO: this should also call Endpoints.ClientTable and merge the two sets of data
         return self.get(Endpoints.Clients, params={
             "take": count, "pageSize": count,
             "page": 1, "skip": 0,
             "sort[0][field]": "macaddr",
             "sort[0][dir]": "asc"
         }).json()['data']
+
+    """
+    TODO
+    def topapps()
+    def client_by_address(name: str = None, ip4: str = None, ip6: str = None, mac: str = None)
+    
+    """
