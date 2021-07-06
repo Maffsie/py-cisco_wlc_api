@@ -59,6 +59,25 @@ class CiscoWLCAPI:
             "sort[0][dir]": "asc"
         }).json()['data']
 
+    @property
+    @Decorators.authenticate
+    def top_apps(self):
+        first = self.get(Endpoints.Apps, params={
+            "take": 150, "pageSize": 150,
+            "page": 1, "skip": 0,
+            "sort[0][field]": "bytes_total",
+            "sort[0][dir]": "desc"
+        }).json()
+        remainder = first['total'] - 150
+        if remainder <= 0:
+            return first['data']
+        second = self.get(Endpoints.Apps, params={
+            "take": remainder, "pageSize": 150,
+            "page": 1, "skip": 150,
+            "sort[0][field]": "bytes_total",
+            "sort[0][dir]": "desc"
+        }).json()
+        return first['data']+second['data']
     """
     TODO
     def topapps()
