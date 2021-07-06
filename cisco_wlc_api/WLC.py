@@ -27,6 +27,9 @@ class CiscoWLCAPI:
 
     def get(self, uri: str, *args, **kwargs) -> requests.models.Response:
         self._r = self.session.get(uri.format(self.base_uri), *args, **kwargs)
+        # Sessions can expire, y'know.
+        if self._r.status_code == 401:
+            self.authenticated = False
         return self._r
 
     def login(self):
