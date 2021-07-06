@@ -1,5 +1,5 @@
-import requests
 from . import Models, Endpoints, Decorators
+from .Core import CiscoWLCAPISession
 
 
 class CiscoWLCAPI:
@@ -7,52 +7,34 @@ class CiscoWLCAPI:
                  base_uri: str = "",
                  credentials: tuple = None,
                  verify_tls: bool = False):
-        # Argument sanitisation
-        assert type(credentials) == tuple, "credentials argument must be a tuple"
-        assert len(credentials) == 2, "credentials argument must be a username and password"
-        assert base_uri.startswith("http"), "base_uri argument must include protocol (http:// or https://)"
-        assert not base_uri.endswith("/"), "base_uri must not end with a forward-slash"
-
+        self.session = CiscoWLCAPISession(
+            base_uri=base_uri,
+            credentials=credentials,
+            verify_tls=verify_tls
+        )
         self.authenticated = False
-        self._r = None
-        self.base_uri = base_uri
-        self.session = requests.Session()
-        self.session.auth = credentials
-
-        if not verify_tls:
-            self.session.verify = False
-            requests.packages.urllib3.disable_warnings(
-                requests.packages.urllib3.exceptions.InsecureRequestWarning
-            )
-
-    def get(self, uri: str, *args, **kwargs) -> requests.models.Response:
-        self._r = self.session.get(uri.format(self.base_uri), *args, **kwargs)
-        # Sessions can expire, y'know.
-        if self._r.status_code == 401:
-            self.authenticated = False
-        return self._r
 
     def login(self):
         self.authenticated = False
-        assert self.get(Endpoints.Dashboard).status_code in (200, 401), \
-            f"Unexpected response {self._r.status_code} when initiating authentication session"
-        assert self.get(Endpoints.Dashboard).status_code == 200, \
-            f"Unexpected response {self._r.status_code} when completing authentication"
+        assert self.session.get(Endpoints.Dashboard).status_code in (200, 401), \
+            f"Unexpected response {self.session.response.status_code} when initiating authentication session"
+        assert self.session.get(Endpoints.Dashboard).status_code == 200, \
+            f"Unexpected response {self.session.response.status_code} when completing authentication"
         self.authenticated = True
         return self.authenticated
 
     @property
     @Decorators.authenticate
     def client_count(self) -> int:
-        return self.get(Endpoints.ClientOverview).json()['total']
+        return self.session.get(Endpoints.ClientOverview).json()['total']
 
     @property
     @Decorators.authenticate
-    def clients(self):
+    def clients(self) -> list[Models.Client]:
         count = self.client_count
         # TODO: this should iterate through the JSON array and generate Client objects for each client
-        # TODO: this should also call Endpoints.ClientTable and merge the two sets of data
-        return self.get(Endpoints.Clients, params={
+        # TODO: this should also call Endpoints.Clients and merge the two sets of data
+        return self.session.get(Endpoints.ClientsTable, params={
             "take": count, "pageSize": count,
             "page": 1, "skip": 0,
             "sort[0][field]": "macaddr",
@@ -61,23 +43,42 @@ class CiscoWLCAPI:
 
     @property
     @Decorators.authenticate
-    def top_apps(self):
-        first = self.get(Endpoints.Apps, params={
+    def top_apps(self) -> list[Models.Application]:
+        first = self.session.get(Endpoints.Apps, params={
             "take": 150, "pageSize": 150,
             "page": 1, "skip": 0,
-            "sort[0][field]": "bytes_total",
-            "sort[0][dir]": "desc"
+            "sort[0][field]": "bytes_90s",
+            "sort[0][dir]": "desc",
+            "sort[1][field]": "bytes_total",
+            "sort[1][dir]": "desc"
         }).json()
         remainder = first['total'] - 150
         if remainder <= 0:
             return first['data']
-        second = self.get(Endpoints.Apps, params={
+        second = self.session.get(Endpoints.Apps, params={
             "take": remainder, "pageSize": 150,
             "page": 1, "skip": 150,
-            "sort[0][field]": "bytes_total",
-            "sort[0][dir]": "desc"
+            "sort[0][field]": "bytes_90s",
+            "sort[0][dir]": "desc",
+            "sort[1][field]": "bytes_total",
+            "sort[1][dir]": "desc"
         }).json()
-        return first['data']+second['data']
+        return [Models.Application(
+            name=x['name'],
+            icon=x['icon_type'],
+            bytes_total=x['bytes_total'],
+            bytes_last_90=x['bytes_90s']
+        ) for x in first['data']+second['data']]
+
+    @Decorators.authenticate
+    def get_client(self,
+                   name: str = None,
+                   ip4: str = None,
+                   ip6: str = None,
+                   mac: str = None):
+        assert len([arg for arg in [name, ip4, ip6, mac] if arg is not None]) == 1, \
+            "Exactly one argument must be passed to get_client"
+        return
     """
     TODO
     def topapps()
