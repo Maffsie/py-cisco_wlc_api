@@ -1,7 +1,31 @@
 import requests
+from . import Exceptions
+
+
+class Assertion:
+    """Utility class for doing more flexible assertions"""
+
+    """
+    TODO:
+    - Basic assertion: Assertion.Assert(condition) -> WLCAssertionException
+    - Basic assertion with exception type: Assertion.Assert(condition, type) -> type
+    - Assertion with validator method: Assertion.Assert(input, validator) -> WLCAssertionException
+    - Assertion with validator method and exception type: Assertion.Assert(input, validator, type) -> type
+
+    Usage examples:
+    Assert(self.verify) -> WLCAssertionException
+    Assert(self.authenticated, Exceptions.NotLoggedInError) -> NotLoggedInError
+    Assert(base_uri, Validators.WLCBaseURI) -> WLCAssertionException
+    Assert(credentials, Validators.CredentialsTuple, Exceptions.InvalidCredentialsError) -> InvalidCredentialsError
+
+    """
+
+    pass
 
 
 class CiscoWLCAPISession(requests.Session):
+    """requests.Session subclass with methods specifically for dealing with requests to the Cisco WLC web interface"""
+
     def __init__(self,
                  base_uri: str = "",
                  credentials: tuple = None,
