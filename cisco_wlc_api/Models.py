@@ -1,5 +1,6 @@
 from .Core import CiscoWLCAPISession
 from . import Endpoints, Enums
+from cachetools.func import ttl_cache
 
 
 class Application:
@@ -48,9 +49,17 @@ class Client:
         self._last_rf = None
 
     def __repr__(self):
-        return f"<Wireless client {self.MAC}={self.State} ({self.IP4}>"
+        return f"<Wireless client {self.MAC} ({self.IP4}>"
 
     @property
+    @ttl_cache(ttl=60)
+    def associated(self):
+        self._last_rf = self._session.get(Endpoints.Client.RF, params={
+            "deviceMacAddress": self.MAC
+        }).json()['data']
+
+    @property
+    @ttl_cache(ttl=60)
     def link_state(self):
         self._last_rf = self._session.get(Endpoints.Client.RF, params={
             "deviceMacAddress": self.MAC
