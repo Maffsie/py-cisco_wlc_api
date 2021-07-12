@@ -6,6 +6,13 @@ class WLCBaseException(HTTPError):
 
 	pass
 
+
+class WLCAssertionException(WLCBaseException):
+	"""Base exception type used for internal assertions"""
+
+	pass
+
+
 class WLCSessionException(WLCBaseException):
 	"""Base exception type used for session-related errors"""
 
