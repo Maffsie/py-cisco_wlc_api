@@ -20,7 +20,28 @@ class Assertion:
 
     """
 
-    pass
+    def Assert(
+        input,
+        exception: Exception = Exceptions.WLCAssertionException,
+        validator = None,
+        *args, **kwargs
+    ):
+        result = None
+        if validator is None:
+            try:
+                result = input(*args, **kwargs)
+            except:
+                # TODO: how do i rotate text in mspaint
+                pass
+            if not result:
+                raise exception(returned=result)
+        else:
+            try:
+                result = validator(input=function, *args, **kwargs)
+            except:
+                pass
+            if not result:
+                exception(returned=result)
 
 
 class CiscoWLCAPISession(requests.Session):
