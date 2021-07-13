@@ -1,4 +1,4 @@
-from urllib3.exceptions import HTTPError
+from requests.packages.urllib3.exceptions import HTTPError
 
 
 class WLCBaseException(HTTPError):
@@ -37,7 +37,7 @@ class NotLoggedInError(WLCSessionException):
 	pass
 
 
-class InvalidCredentialsError(WLCSessionException):
+class LoginFailureError(WLCSessionException):
 	"""Error raised when a login attempt fails"""
 
 	pass

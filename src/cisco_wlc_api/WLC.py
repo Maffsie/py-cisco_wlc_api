@@ -1,4 +1,9 @@
-from . import Models, Endpoints, Decorators
+from . import (
+    Decorators,
+    Endpoints,
+    Models,
+    Validators
+)
 from .Core import CiscoWLCAPISession
 
 
@@ -16,10 +21,8 @@ class CiscoWLCAPI:
 
     def login(self):
         self.authenticated = False
-        assert self.session.get(Endpoints.Dashboard).status_code in (200, 401), \
-            f"Unexpected response {self.session.response.status_code} when initiating authentication session"
-        assert self.session.get(Endpoints.Dashboard).status_code == 200, \
-            f"Unexpected response {self.session.response.status_code} when completing authentication"
+        Validators.status_firstlogin(self.session.get(Endpoints.Dashboard))
+        Validators.status(self.session.get(Endpoints.Dashboard))
         self.authenticated = True
         return self.authenticated
 
@@ -76,8 +79,7 @@ class CiscoWLCAPI:
                    ip4: str = None,
                    ip6: str = None,
                    mac: str = None):
-        assert len([arg for arg in [name, ip4, ip6, mac] if arg is not None]) == 1, \
-            "Exactly one argument must be passed to get_client"
+        Validators.length([arg for arg in [name, ip4, ip6, mac] if arg is not None], 1)
         return
     """
     TODO

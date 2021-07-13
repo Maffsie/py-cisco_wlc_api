@@ -1,2 +1,2 @@
-from .WLC import CiscoWLCAPI
 from . import Validators
+from .WLC import CiscoWLCAPI

@@ -1,47 +1,5 @@
+from . import Exceptions, Validators
 import requests
-from . import Exceptions
-
-
-class Assertion:
-    """Utility class for doing more flexible assertions"""
-
-    """
-    TODO:
-    - Basic assertion: Assertion.Assert(condition) -> WLCAssertionException
-    - Basic assertion with exception type: Assertion.Assert(condition, type) -> type
-    - Assertion with validator method: Assertion.Assert(input, validator) -> WLCAssertionException
-    - Assertion with validator method and exception type: Assertion.Assert(input, validator, type) -> type
-
-    Usage examples:
-    Assert(self.verify) -> WLCAssertionException
-    Assert(self.authenticated, Exceptions.NotLoggedInError) -> NotLoggedInError
-    Assert(base_uri, Validators.WLCBaseURI) -> WLCAssertionException
-    Assert(credentials, Validators.CredentialsTuple, Exceptions.InvalidCredentialsError) -> InvalidCredentialsError
-
-    """
-
-    def Assert(
-        input,
-        exception: Exception = Exceptions.WLCAssertionException,
-        validator = None,
-        *args, **kwargs
-    ):
-        result = None
-        if validator is None:
-            try:
-                result = input(*args, **kwargs)
-            except:
-                # TODO: how do i rotate text in mspaint
-                pass
-            if not result:
-                raise exception(returned=result)
-        else:
-            try:
-                result = validator(input=function, *args, **kwargs)
-            except:
-                pass
-            if not result:
-                exception(returned=result)
 
 
 class CiscoWLCAPISession(requests.Session):
@@ -54,11 +12,9 @@ class CiscoWLCAPISession(requests.Session):
                  *args, **kwargs
                  ):
         super(CiscoWLCAPISession, self).__init__(*args, **kwargs)
-        assert base_uri.startswith("http"), "base_uri argument must include protocol (http:// or https://)"
-        assert not base_uri.endswith("/"), "base_uri must not end with a forward-slash"
+        Validators.baseurl(base_uri)
         self._base_uri = base_uri
-        assert type(credentials) == tuple, "credentials argument must be a tuple"
-        assert len(credentials) == 2, "credentials argument must be a username and password"
+        Validators.credential(credentials)
         self.auth = credentials
         self._last_url = None
         self._last_method = None
@@ -73,7 +29,12 @@ class CiscoWLCAPISession(requests.Session):
             )
 
     def retry_last(self) -> requests.Response:
-        assert self._last_url is not None, "No previous request to retry."
+        Validators.simple(
+            condition=self._last_url is not None,
+            message_on_failure="No previous request to retry.",
+            message_for_remediation="Make a request first",
+            exception_type=Exceptions.NoPreviousRequestError
+        )
         return self.request(
             method=self._last_method,
             url=self._last_url,
