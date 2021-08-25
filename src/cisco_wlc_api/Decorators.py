@@ -1,7 +1,7 @@
 from .Exceptions import LoginFailureError
 
 
-def authenticate(function):
+def must_auth(function):
     def wrapper(self, *args, **kwargs):
         if self.authenticated:
             return function(self, *args, **kwargs)

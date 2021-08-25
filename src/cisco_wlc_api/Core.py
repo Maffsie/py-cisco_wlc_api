@@ -41,18 +41,17 @@ class CiscoWLCAPISession(requests.Session):
             **self._last_kwargs
         )
 
-    def request(
-            self,
-            method: str,
-            url: str,
-            **kwargs
-    ) -> requests.Response:
+    def request(self,
+                method: str,
+                url: str,
+                **kwargs
+                ) -> requests.Response:
         self._last_url = url
         self._last_method = method
         self._last_kwargs = kwargs
         self.response = super(CiscoWLCAPISession, self).request(
             method=method,
-            url=url.format(self._base_uri),
+            url=f"{self._base_uri}/{url}",
             **kwargs)
         if self.response.status_code == 401:
             if self.authed:
@@ -61,3 +60,19 @@ class CiscoWLCAPISession(requests.Session):
             self.authed = False
         return self.response
 
+    def map_kv(self,
+               mapper: dict,
+               data: list = None
+               ):
+        retdict = {}
+        for item in data if data is not None else self.response.json()['data']:
+            (k, v) = (item['key'], item['value'])
+            if k in mapper.keys():
+                if str(v).lower() in ('no', 'false'):
+                    v = False
+                if str(v).lower() in ('yes', 'true'):
+                    v = True
+                if str(v).lower() in ('unknown',):
+                    v = None
+                retdict[mapper.get(k)] = v
+        return retdict

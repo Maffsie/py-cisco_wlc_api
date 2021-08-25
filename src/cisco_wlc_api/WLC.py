@@ -1,10 +1,10 @@
 from . import (
-    Decorators,
     Endpoints,
     Models,
     Validators
 )
 from .Core import CiscoWLCAPISession
+from .Decorators import must_auth
 
 
 class CiscoWLCAPI:
@@ -21,31 +21,40 @@ class CiscoWLCAPI:
 
     def login(self):
         self.authenticated = False
-        Validators.status_firstlogin(self.session.get(Endpoints.Dashboard))
-        Validators.status(self.session.get(Endpoints.Dashboard))
+        Validators.response_code(response=self.session.get(Endpoints.Dashboard), expect=(200, 401))
+        Validators.response_code(response=self.session.retry_last())
         self.authenticated = True
         return self.authenticated
 
     @property
-    @Decorators.authenticate
+    @must_auth
     def client_count(self) -> int:
-        return self.session.get(Endpoints.ClientOverview).json()['total']
+        return self.session.get(Endpoints.Clients.Counts).json()['total']
 
     @property
-    @Decorators.authenticate
+    @must_auth
     def clients(self) -> list[Models.Client]:
         count = self.client_count
         # TODO: this should iterate through the JSON array and generate Client objects for each client
         # TODO: this should also call Endpoints.Clients and merge the two sets of data
-        return self.session.get(Endpoints.ClientsTable, params={
+        clients = []
+        for client in self.session.get(Endpoints.Clients.List, params={
             "take": count, "pageSize": count,
             "page": 1, "skip": 0,
             "sort[0][field]": "macaddr",
             "sort[0][dir]": "asc"
-        }).json()['data']
+        }).json()['data']:
+            clients.append(Models.Client(
+                session=self.session,
+                macaddr=client['macaddr'],
+                hostname=client['HN'],
+                ip4=client['IP'],
+                devtype=client['devtype']
+            ))
+        return clients
 
     @property
-    @Decorators.authenticate
+    @must_auth
     def top_apps(self) -> list[Models.Application]:
         first = self.session.get(Endpoints.Apps, params={
             "take": 150, "pageSize": 150,
@@ -73,7 +82,7 @@ class CiscoWLCAPI:
             bytes_last_90=x['bytes_90s']
         ) for x in first['data']+second['data']]
 
-    @Decorators.authenticate
+    @must_auth
     def get_client(self,
                    name: str = None,
                    ip4: str = None,

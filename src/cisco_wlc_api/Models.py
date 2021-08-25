@@ -16,13 +16,13 @@ class Application:
         self.BytesRecently = bytes_last_90
 
     def __add__(self, other):
-        return self.BytesTotal+other.BytesTotal
+        return self.BytesTotal + other.BytesTotal
 
     def __sub__(self, other):
         if self.BytesTotal >= other.BytesTotal:
-            return self.BytesTotal-other.BytesTotal
+            return self.BytesTotal - other.BytesTotal
         else:
-            return other.BytesTotal-self.BytesTotal
+            return other.BytesTotal - self.BytesTotal
 
     def __repr__(self):
         return f"<Application {self.Name} (total {self.BytesTotal}b, {self.BytesRecently} last 90 seconds)>"
@@ -32,13 +32,13 @@ class Client:
     def __init__(self,
                  session: CiscoWLCAPISession,
                  macaddr: str,
-                 ip4: str,
-                 ip6: str,
-                 hostname: str,
-                 icon: str,
+                 ip4: str = None,
+                 ip6: str = None,
+                 hostname: str = None,
+                 icon: str = None,
                  devtype: str = None,
                  ):
-        self._session=session
+        self._session = session
         self.MAC = macaddr
         self.IP4 = ip4
         self.IP6 = ip6
@@ -46,24 +46,93 @@ class Client:
         self.Icon = icon
         self.Type = devtype
 
+        self.VLAN = None
+        self.is_fastlane = None
+        self.mobility_role = None
+
+        self.qos_wmm = None
+        self.qos_apsd = None
+        self.qos_level = None
+
+        self.rf_width = None
+        self.rf_width_max = None
+        self.rf_rate = None
+        self.rf_spatial = None
+        self.rf_spatial_max = None
+        self.rf_channel = None
+        self.rf_capability = None
+
+        self.security_acl_v4 = None
+        self.security_acl_v6 = None
+        self.security_cipher = None
+        self.security_kmp = None
+        self.security_policy = None
+
+        self._last_refresh = None
         self._last_rf = None
 
     def __repr__(self):
-        return f"<Wireless client {self.MAC} ({self.IP4}>"
+        return f"<Wireless client (MAC={self.MAC})>"
+
+    def refresh(self):
+        self.refresh_network()
+        self.refresh_qos()
+        self.refresh_security()
+
+    def refresh_network(self):
+        attrs = self._session.map_kv(mapper=Endpoints.Clients.Client.Maps.Network,
+                                     data=self._session.get(
+                                         Endpoints.Clients.Client.Network,
+                                         params={
+                                             "deviceMacAddress": self.MAC
+                                         }).json()['data'])
+        self.IP4 = attrs['IP4']
+        self.IP6 = attrs['IP6']
+        self.VLAN = int(attrs['VLAN'])
+        self.is_fastlane = attrs['is_fastlane']
+        self.mobility_role = attrs['mobility_role']
+
+    def refresh_qos(self):
+        attrs = self._session.map_kv(mapper=Endpoints.Clients.Client.Maps.QoS,
+                                     data=self._session.get(
+                                         Endpoints.Clients.Client.QoS,
+                                         params={
+                                             "deviceMacAddress": self.MAC
+                                         }).json()['data'])
+        self.qos_wmm = attrs['wmm']
+        self.qos_apsd = attrs['apsd']
+        self.qos_level = attrs['level']
+
+    def refresh_rf(self):
+        attrs = self._session.map_kv(mapper=Endpoints.Clients.Client.Maps.RF,
+                                     data=self._session.get(
+                                         Endpoints.Clients.Client.RF,
+                                         params={
+                                             "deviceMacAddress": self.MAC
+                                         }).json()['data'])
+
+
+    def refresh_security(self):
+        attrs = self._session.map_kv(mapper=Endpoints.Clients.Client.Maps.Security,
+                                     data=self._session.get(
+                                         Endpoints.Clients.Client.Security,
+                                         params={
+                                             "deviceMacAddress": self.MAC
+                                         }).json()['data'])
+        (self.security_acl_v4, self.security_acl_v6) = attrs['sec_acl'].split('/')
+        self.security_cipher = attrs['sec_cipher']
+        self.security_kmp = attrs['sec_kmp']
+        self.security_policy = attrs['sec_pol']
 
     @property
     @ttl_cache(ttl=60)
     def associated(self):
-        self._last_rf = self._session.get(Endpoints.Client.RF, params={
-            "deviceMacAddress": self.MAC
-        }).json()['data']
+        self.refresh_rf()
 
     @property
     @ttl_cache(ttl=60)
     def link_state(self):
-        self._last_rf = self._session.get(Endpoints.Client.RF, params={
-            "deviceMacAddress": self.MAC
-        }).json()['data']
+        self.refresh_rf()
         return [attr['value'] for attr in self._last_rf if attr['key'] == "Capabilities"][0]
 
 

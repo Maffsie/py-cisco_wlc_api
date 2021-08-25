@@ -23,6 +23,45 @@ class Clients:
         Security = "data/rfdashboard/clientview_details_security.html"
         QoS = "data/rfdashboard/clientview_details_qos.html"
 
+        class Maps:
+            Network = {
+                'IP Address': 'IP4',
+                'IPv6 Address': 'IP6',
+                'VLAN': 'VLAN',
+                'Fastlane Client': 'is_fastlane',
+                'Mobility Role': 'mobility_role'
+            }
+            QoS = {
+                'WMM': 'wmm',
+                'U-APSD': 'apsd',
+                'QoS Level': 'level'
+            }
+            RF = {
+                'Hostname': 'host',
+                'Status': 'assoctime',
+                'SSID': 'wlnet',
+                'AP Name': 'assocap',
+                'Channel': 'chan',
+                'Device Type': 'type',
+                'Capabilities': 'wlcap',
+                'SpatialStream': 'spat_str',
+                'ConnRate': 'assocrate',
+                'RSSI': 'strength',
+                'SNR': 'snr',
+                'volume': 'bytes_total',
+                'ConnScore': 'connscore',
+                'maxClientRate': 'rate_max',
+                'spacialstrmClients': 'spat_str_max',
+                'ChannelWidth': 'chanwidth',
+                'ChannelWidthClient': 'chanwidth_max'
+            }
+            Security = {
+                'Policy': 'sec_pol',
+                'Cipher': 'sec_cipher',
+                'Key Management': 'sec_kmp',
+                'ACL (IP/IPv6)': 'sec_acls'
+            }
+
 
 class RF:
     List = "data/wlans.html"
