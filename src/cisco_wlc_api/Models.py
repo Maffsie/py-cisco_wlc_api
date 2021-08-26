@@ -6,9 +6,9 @@ from cachetools.func import ttl_cache
 class Application:
     def __init__(self,
                  name: str,
-                 icon: str,
                  bytes_total: int,
-                 bytes_last_90: int
+                 icon: str = None,
+                 bytes_last_90: int = None
                  ):
         self.Name = name
         self.Icon = icon
@@ -25,7 +25,23 @@ class Application:
             return other.BytesTotal - self.BytesTotal
 
     def __repr__(self):
-        return f"<Application {self.Name} (total {self.BytesTotal}b, {self.BytesRecently} last 90 seconds)>"
+        bytes_t = self.BytesTotal
+        units = 'b'
+        # TODO: This is really gross lmfao
+        if bytes_t >= 1024:
+            bytes_t /= 1024
+            units = 'kb'
+        if bytes_t >= 1024:
+            bytes_t /= 1024
+            units = 'mb'
+        if bytes_t >= 1024:
+            bytes_t /= 1024
+            units = 'gb'
+        if bytes_t >= 1024:
+            bytes_t /= 1024
+            units = 'tb'
+        return (f"<Application (Name={self.Name}, total={bytes_t:g}{units},"
+                f"recent={self.BytesRecently if self.BytesRecently is not None else '[no data]'}b)>")
 
 
 class Client:
@@ -57,10 +73,13 @@ class Client:
         self.rf_width = None
         self.rf_width_max = None
         self.rf_rate = None
-        self.rf_spatial = None
-        self.rf_spatial_max = None
+        self.rf_spatial_streams = None
+        self.rf_spatial_streams_max = None
         self.rf_channel = None
         self.rf_capability = None
+        self.rf_rssi = None
+        self.rf_snr = None
+        self.rf_connection_score = None
 
         self.security_acl_v4 = None
         self.security_acl_v6 = None
@@ -68,61 +87,107 @@ class Client:
         self.security_kmp = None
         self.security_policy = None
 
-        self._last_refresh = None
-        self._last_rf = None
+        self._last = {
+            'apps': [],
+            'mobility': [],
+            'network': {},
+            'qos': {},
+            'rf': {},
+            'security': {}
+        }
 
     def __repr__(self):
         return f"<Wireless client (MAC={self.MAC})>"
 
+    @ttl_cache(ttl=60)
     def refresh(self):
         self.refresh_network()
         self.refresh_qos()
+        self.refresh_rf()
         self.refresh_security()
 
+    @ttl_cache(ttl=60)
+    def refresh_apps(self):
+        self._last['apps'] = self._session.get(
+            Endpoints.Clients.Client.Apps,
+            params={
+                "deviceMacAddress": self.MAC,
+                "take": 50,
+                "pageSize": 200,
+                "page": 1,
+                "skip": 0,
+                "sort[0][field]": "bytes_total",
+                "sort[0][dir]": "desc"
+            }).json()['data']
+
+    @ttl_cache(ttl=60)
+    def refresh_mobility(self):
+        self._last['mobility'] = self._session.get(
+            Endpoints.Clients.Client.Mobility,
+            params={
+                "deviceMacAddress": self.MAC
+            }).json()['mobility']
+
+    @ttl_cache(ttl=60)
     def refresh_network(self):
-        attrs = self._session.map_kv(mapper=Endpoints.Clients.Client.Maps.Network,
-                                     data=self._session.get(
-                                         Endpoints.Clients.Client.Network,
-                                         params={
-                                             "deviceMacAddress": self.MAC
-                                         }).json()['data'])
-        self.IP4 = attrs['IP4']
-        self.IP6 = attrs['IP6']
-        self.VLAN = int(attrs['VLAN'])
-        self.is_fastlane = attrs['is_fastlane']
-        self.mobility_role = attrs['mobility_role']
+        self._last['network'] = self._session.map_kv(mapper=Endpoints.Clients.Client.Maps.Network,
+                                                     data=self._session.get(
+                                                         Endpoints.Clients.Client.Network,
+                                                         params={
+                                                             "deviceMacAddress": self.MAC
+                                                         }).json()['data'])
+        self.IP4 = self._last['network']['IP4']
+        self.IP6 = self._last['network']['IP6']
+        self.VLAN = int(self._last['network']['VLAN'])
+        self.is_fastlane = self._last['network']['is_fastlane']
+        self.mobility_role = self._last['network']['mobility_role']
 
+    @ttl_cache(ttl=60)
     def refresh_qos(self):
-        attrs = self._session.map_kv(mapper=Endpoints.Clients.Client.Maps.QoS,
-                                     data=self._session.get(
-                                         Endpoints.Clients.Client.QoS,
-                                         params={
-                                             "deviceMacAddress": self.MAC
-                                         }).json()['data'])
-        self.qos_wmm = attrs['wmm']
-        self.qos_apsd = attrs['apsd']
-        self.qos_level = attrs['level']
+        self._last['qos'] = self._session.map_kv(mapper=Endpoints.Clients.Client.Maps.QoS,
+                                                 data=self._session.get(
+                                                     Endpoints.Clients.Client.QoS,
+                                                     params={
+                                                         "deviceMacAddress": self.MAC
+                                                     }).json()['data'])
+        self.qos_wmm = self._last['qos']['wmm']
+        self.qos_apsd = self._last['qos']['apsd']
+        self.qos_level = self._last['qos']['level']
 
+    @ttl_cache(ttl=60)
     def refresh_rf(self):
-        attrs = self._session.map_kv(mapper=Endpoints.Clients.Client.Maps.RF,
+        self._last['rf'] = self._session.map_kv(mapper=Endpoints.Clients.Client.Maps.RF,
                                      data=self._session.get(
                                          Endpoints.Clients.Client.RF,
                                          params={
                                              "deviceMacAddress": self.MAC
                                          }).json()['data'])
+        self.rf_width = int(self._last['rf']['chanwidth'])
+        self.rf_width_max = int(self._last['rf']['chanwidth_max'])
+        self.rf_rate = int(self._last['rf']['assocrate'])
+        self.rf_spatial_streams = int(self._last['rf']['spat_str'])
+        self.rf_spatial_streams_max = int(self._last['rf']['spat_str_max'])
+        self.rf_channel = int(self._last['rf']['chan'])
+        self.rf_capability = self._last['rf']['wlcap']
+        self.rf_rssi = int(self._last['rf']['strength'])
+        self.rf_snr = int(self._last['rf']['snr'])
+        self.rf_connection_score = int(self._last['rf']['connscore'])
 
+        self.Hostname = self._last['rf']['host']
+        self.Type = self._last['rf']['type']
 
+    @ttl_cache(ttl=60)
     def refresh_security(self):
-        attrs = self._session.map_kv(mapper=Endpoints.Clients.Client.Maps.Security,
-                                     data=self._session.get(
-                                         Endpoints.Clients.Client.Security,
-                                         params={
-                                             "deviceMacAddress": self.MAC
-                                         }).json()['data'])
-        (self.security_acl_v4, self.security_acl_v6) = attrs['sec_acl'].split('/')
-        self.security_cipher = attrs['sec_cipher']
-        self.security_kmp = attrs['sec_kmp']
-        self.security_policy = attrs['sec_pol']
+        self._last['security'] = self._session.map_kv(mapper=Endpoints.Clients.Client.Maps.Security,
+                                                      data=self._session.get(
+                                                          Endpoints.Clients.Client.Security,
+                                                          params={
+                                                              "deviceMacAddress": self.MAC
+                                                          }).json()['data'])
+        (self.security_acl_v4, self.security_acl_v6) = self._last['security']['sec_acls'].split('/')
+        self.security_cipher = self._last['security']['sec_cipher']
+        self.security_kmp = self._last['security']['sec_kmp']
+        self.security_policy = self._last['security']['sec_pol']
 
     @property
     @ttl_cache(ttl=60)
@@ -131,9 +196,34 @@ class Client:
 
     @property
     @ttl_cache(ttl=60)
-    def link_state(self):
+    def bytes_total(self):
         self.refresh_rf()
-        return [attr['value'] for attr in self._last_rf if attr['key'] == "Capabilities"][0]
+        return self._last['rf'].get('bytes_total', 0)
+
+    @property
+    @ttl_cache(ttl=60)
+    def uptime(self):
+        self.refresh_rf()
+        return self._last['rf'].get('assoctime', 0)
+
+    @property
+    @ttl_cache(ttl=60)
+    def mobility(self):
+        self.refresh_mobility()
+        return self._last['mobility']
+
+    @property
+    @ttl_cache(ttl=60)
+    def apps(self):
+        self.refresh_apps()
+        apps = []
+        for app in self._last['apps']:
+            apps.append(
+                Application(name=app['name'],
+                            bytes_total=int(app['bytes_total'])
+                            )
+            )
+        return apps
 
 
 """

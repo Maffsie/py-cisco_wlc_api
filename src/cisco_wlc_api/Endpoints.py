@@ -38,6 +38,7 @@ class Clients:
             }
             RF = {
                 'Hostname': 'host',
+                'Device Type': 'devtype',
                 'Status': 'assoctime',
                 'SSID': 'wlnet',
                 'AP Name': 'assocap',
@@ -51,9 +52,9 @@ class Clients:
                 'volume': 'bytes_total',
                 'ConnScore': 'connscore',
                 'maxClientRate': 'rate_max',
-                'spacialstrmClients': 'spat_str_max',
+                'spatialstrmClients': 'spat_str_max',
                 'ChannelWidth': 'chanwidth',
-                'ChannelWidthClient': 'chanwidth_max'
+                'ChannelwidthClient': 'chanwidth_max'
             }
             Security = {
                 'Policy': 'sec_pol',

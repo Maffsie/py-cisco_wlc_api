@@ -65,6 +65,8 @@ class CiscoWLCAPISession(requests.Session):
                data: list = None
                ):
         retdict = {}
+        if data is None and self.response.json().get('data', None) is None:
+            raise Exceptions.QueryReturnedNoResultsError()
         for item in data if data is not None else self.response.json()['data']:
             (k, v) = (item['key'], item['value'])
             if k in mapper.keys():
@@ -72,7 +74,7 @@ class CiscoWLCAPISession(requests.Session):
                     v = False
                 if str(v).lower() in ('yes', 'true'):
                     v = True
-                if str(v).lower() in ('unknown',):
+                if str(v).lower() in ('unknown','unclassified'):
                     v = None
                 retdict[mapper.get(k)] = v
         return retdict

@@ -50,7 +50,14 @@ class SessionExpiredError(WLCSessionException):
 
 
 class ClientNotPresentError(WLCRequestException):
-	"""Error raised when a Client object refers to a non-existent client, or when a method that queries for a client returns no results"""
+	"""Error raised when a Client object refers to a non-existent client, or when a method that queries for a client
+	returns no results """
+
+	pass
+
+
+class QueryReturnedNoResultsError(WLCRequestException):
+	"""Error raised when a filtered query (eg. Endpoints.Clients.Client.RF(devicemacaddress=..)) returns no results"""
 
 	pass
 
