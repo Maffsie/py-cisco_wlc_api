@@ -1,4 +1,11 @@
+"""
+Simple test script to list the hostname and IP address of all
+associated wireless clients.
+Credentials are gathered from environment variables.
+"""
+
 from os import environ as env
+# pylint: disable=import-error
 from src.cisco_wlc_api import CiscoWLCAPI
 
 wlc = CiscoWLCAPI(
