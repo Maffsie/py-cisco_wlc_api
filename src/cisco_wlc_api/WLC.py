@@ -78,8 +78,8 @@ class CiscoWLCAPI:
         return [Models.Application(
             name=x['name'],
             icon=x['icon_type'],
-            bytes_total=x['bytes_total'],
-            bytes_last_90=x['bytes_90s']
+            bytes_total=int(x['bytes_total']),
+            bytes_last_90=int(x['bytes_90s'])
         ) for x in first['data']+second['data']]
 
     @must_auth
