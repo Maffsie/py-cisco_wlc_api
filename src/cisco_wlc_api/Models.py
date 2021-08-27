@@ -1,5 +1,5 @@
 from .Core import CiscoWLCAPISession
-from . import Endpoints, Enums
+from . import Endpoints
 from cachetools.func import ttl_cache
 
 
@@ -101,6 +101,8 @@ class Client:
 
     @ttl_cache(ttl=60)
     def refresh(self):
+        self.refresh_apps()
+        self.refresh_mobility()
         self.refresh_network()
         self.refresh_qos()
         self.refresh_rf()
