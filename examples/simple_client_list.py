@@ -5,17 +5,15 @@ Credentials are gathered from environment variables.
 """
 
 from os import environ as env
+
 # pylint: disable=import-error
 from src.cisco_wlc_api import CiscoWLCAPI
 
-wlc = CiscoWLCAPI(
-    base_uri=env.get('WLC_URI'),
-    credentials=(
-        env.get('WLC_USER', 'admin'),
-        env.get('WLC_PASS')
-    )
+WLC = CiscoWLCAPI(
+    base_uri=env.get("WLC_URI"),
+    credentials=(env.get("WLC_USER", "admin"), env.get("WLC_PASS")),
 )
 
 if __name__ == "__main__":
-    for client in wlc.clients:
+    for client in WLC.clients:
         print(f"{client.Hostname} = {client.IP4}")

@@ -4,46 +4,49 @@ Tests for the validation functionality in this module
 
 import pytest
 from requests import Request, Response
-# pylint: disable=import-error
-import src.cisco_wlc_api.Validators as CiscoWLCAPIValidators
-import src.cisco_wlc_api.Exceptions as CiscoWLCAPIExceptions
 
+# pylint: disable=import-error
+import src.cisco_wlc_api.Exceptions as CiscoWLCAPIExceptions
+import src.cisco_wlc_api.Validators as CiscoWLCAPIValidators
 
 # Test data
 length_test_a = [
-    'one',
-    'two',
-    'three',
-    'four',
+    "one",
+    "two",
+    "three",
+    "four",
 ]
 length_test_b = (
-    'one',
-    'two',
-    'three',
-    'four',
-    'five',
+    "one",
+    "two",
+    "three",
+    "four",
+    "five",
 )
 length_test_c = (
-    'one',
-    ('one', 'two',),
-    ('two',),
-    'three',
+    "one",
+    (
+        "one",
+        "two",
+    ),
+    ("two",),
+    "three",
 )
 response_test_a = Response()
 response_test_a.status_code = 200
 response_test_a.request = Request()
-response_test_a.request.method = 'put'
-response_test_a.request.url = 'http://test-url'
+response_test_a.request.method = "put"
+response_test_a.request.url = "http://test-url"
 response_test_b = Response()
 response_test_b.status_code = 401
 response_test_b.request = Request()
-response_test_b.request.method = 'get'
-response_test_b.request.url = 'http://test-url'
+response_test_b.request.method = "get"
+response_test_b.request.url = "http://test-url"
 response_test_c = Response()
 response_test_c.status_code = 503
 response_test_c.request = Request()
-response_test_c.request.method = 'post'
-response_test_c.request.url = 'http://test-url'
+response_test_c.request.method = "post"
+response_test_c.request.url = "http://test-url"
 
 
 def test_baseurl_type_enforcement():
@@ -57,21 +60,21 @@ def test_baseurl_urlproto_match():
     """Test that an invalid or missing protocol correctly raises
     an exception"""
     with pytest.raises(CiscoWLCAPIExceptions.WLCAssertionException):
-        CiscoWLCAPIValidators.baseurl(url='127.0.0.1')
+        CiscoWLCAPIValidators.baseurl(url="127.0.0.1")
     with pytest.raises(CiscoWLCAPIExceptions.WLCAssertionException):
-        CiscoWLCAPIValidators.baseurl(url='hxxp://127.0.0.1')
+        CiscoWLCAPIValidators.baseurl(url="hxxp://127.0.0.1")
 
 
 def test_baseurl_suffix():
     """Test that a base URL with a trailing slash correctly fails validation"""
     with pytest.raises(CiscoWLCAPIExceptions.WLCAssertionException):
-        CiscoWLCAPIValidators.baseurl(url='http://127.0.0.1/')
+        CiscoWLCAPIValidators.baseurl(url="http://127.0.0.1/")
 
 
 def test_baseurl_succeeds():
     """Test that valid base URLs are correctly validated"""
-    assert CiscoWLCAPIValidators.baseurl(url='http://127.0.0.1')
-    assert CiscoWLCAPIValidators.baseurl(url='https://cisco-wlc-web-ui.local')
+    assert CiscoWLCAPIValidators.baseurl(url="http://127.0.0.1")
+    assert CiscoWLCAPIValidators.baseurl(url="https://cisco-wlc-web-ui.local")
 
 
 def test_length_wrong():
@@ -99,12 +102,14 @@ def test_credential_type_fails():
     with pytest.raises(CiscoWLCAPIExceptions.IncorrectTypeError):
         CiscoWLCAPIValidators.credential("admin, password")
     with pytest.raises(CiscoWLCAPIExceptions.IncorrectTypeError):
-        CiscoWLCAPIValidators.credential(['admin', 'password'])
+        CiscoWLCAPIValidators.credential(["admin", "password"])
     with pytest.raises(CiscoWLCAPIExceptions.IncorrectTypeError):
-        CiscoWLCAPIValidators.credential({
-            'username': 'admin',
-            'password': 'password',
-        })
+        CiscoWLCAPIValidators.credential(
+            {
+                "username": "admin",
+                "password": "password",
+            }
+        )
 
 
 def test_credential_length_fails():
@@ -112,9 +117,9 @@ def test_credential_length_fails():
     raises an IncorrectLengthError when there are too few or too many
     items in the tuple"""
     with pytest.raises(CiscoWLCAPIExceptions.IncorrectLengthError):
-        CiscoWLCAPIValidators.credential(('username',))
+        CiscoWLCAPIValidators.credential(("username",))
     with pytest.raises(CiscoWLCAPIExceptions.IncorrectLengthError):
-        CiscoWLCAPIValidators.credential(('username','password','extra'))
+        CiscoWLCAPIValidators.credential(("username", "password", "extra"))
 
 
 def test_credential_tuple_type_fails():
@@ -123,15 +128,15 @@ def test_credential_tuple_type_fails():
     with pytest.raises(CiscoWLCAPIExceptions.IncorrectTypeError):
         CiscoWLCAPIValidators.credential((int(2), int(3)))
     with pytest.raises(CiscoWLCAPIExceptions.IncorrectTypeError):
-        CiscoWLCAPIValidators.credential(('2', int(3)))
+        CiscoWLCAPIValidators.credential(("2", int(3)))
     with pytest.raises(CiscoWLCAPIExceptions.IncorrectTypeError):
-        CiscoWLCAPIValidators.credential((int(2), '3'))
+        CiscoWLCAPIValidators.credential((int(2), "3"))
 
 
 def test_credential_succeeds():
     """Test that the credentials validator correctly accepts
     valid input"""
-    assert CiscoWLCAPIValidators.credential(('admin','password'))
+    assert CiscoWLCAPIValidators.credential(("admin", "password"))
 
 
 def test_response_code_wrong_response_type():
@@ -142,14 +147,20 @@ def test_response_code_wrong_response_type():
 
 
 def test_response_code_wrong_expect_type():
-    """"Test that an IncorrectTypeError is correctly raised
+    """ "Test that an IncorrectTypeError is correctly raised
     when an incorrect typed parameter is supplied"""
     with pytest.raises(CiscoWLCAPIExceptions.IncorrectTypeError):
-        CiscoWLCAPIValidators.response_code(response_test_a, '200')
+        CiscoWLCAPIValidators.response_code(response_test_a, "200")
     with pytest.raises(CiscoWLCAPIExceptions.IncorrectTypeError):
         CiscoWLCAPIValidators.response_code(response_test_a, int(200))
     with pytest.raises(CiscoWLCAPIExceptions.IncorrectTypeError):
-        CiscoWLCAPIValidators.response_code(response_test_a, (int(200), '200',))
+        CiscoWLCAPIValidators.response_code(
+            response_test_a,
+            (
+                int(200),
+                "200",
+            ),
+        )
 
 
 def test_response_code_unexpected_response_code():

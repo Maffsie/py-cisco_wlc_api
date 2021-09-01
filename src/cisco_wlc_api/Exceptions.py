@@ -1,5 +1,5 @@
 """
-Exceptions used within this module
+Exceptions used within cisco_wlc_api.
 """
 
 # pylint: disable=invalid-name,import-error
@@ -24,6 +24,10 @@ class WLCRequestException(WLCBaseException):
 
 class WLCFormatException(WLCBaseException):
     """Base exception type used for format-related errors"""
+
+
+class WLCModelException(WLCBaseException):
+    """Base exception type used for model-related errors"""
 
 
 class IncorrectTypeError(WLCAssertionException):
@@ -53,7 +57,7 @@ class SessionExpiredError(WLCSessionException):
 
 class ClientNotPresentError(WLCRequestException):
     """Error raised when a Client object refers to a non-existent client,
-    or when a method that queries for a client returns no results """
+    or when a method that queries for a client returns no results"""
 
 
 class QueryReturnedNoResultsError(WLCRequestException):
@@ -64,3 +68,8 @@ class QueryReturnedNoResultsError(WLCRequestException):
 class NoPreviousRequestError(WLCRequestException):
     """Error raised when CiscoWLCAPISession.retry_last is called without there
     being a "last request" to retry."""
+
+
+class NoPropertyError(WLCModelException):
+    """Error raised when a method is called on a Model object when a required
+    property is missing"""
