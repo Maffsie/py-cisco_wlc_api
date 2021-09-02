@@ -77,45 +77,47 @@ class CiscoWLCAPI:
             )
         return clients
 
-    # @property
-    # @must_auth
-    # def top_apps(self) -> list[Models.Application]:
-    #    """A list of application-specific bandwidth information"""
-    #    first = self.session.get(
-    #        Endpoints.Apps,
-    #        params={
-    #            "take": 150,
-    #            "pageSize": 150,
-    #            "page": 1,
-    #            "skip": 0,
-    #            "sort[0][field]": "bytes_90s",
-    #            "sort[0][dir]": "desc",
-    #            "sort[1][field]": "bytes_total",
-    #            "sort[1][dir]": "desc",
-    #        },
-    #    ).json()
-    #    remainder = first["total"] - 150
-    #    if remainder <= 0:
-    #        return first["data"]
-    #    second = self.session.get(
-    #        Endpoints.Apps,
-    #        params={
-    #            "take": remainder,
-    #            "pageSize": 150,
-    #            "page": 1,
-    #            "skip": 150,
-    #            "sort[0][field]": "bytes_90s",
-    #            "sort[0][dir]": "desc",
-    #            "sort[1][field]": "bytes_total",
-    #            "sort[1][dir]": "desc",
-    #        },
-    #    ).json()
-    #    return [
-    #        Models.Application(
-    #            name=x["name"],
-    #            icon=x["icon_type"],
-    #            bytes_total=int(x["bytes_total"]),
-    #            bytes_last_90=int(x["bytes_90s"]),
-    #        )
-    #        for x in first["data"] + second["data"]
-    #    ]
+    @property
+    @must_auth
+    def top_apps(self) -> list[Models.Application]:
+        """A list of application-specific bandwidth information"""
+
+        result = self.session.get(
+            Endpoints.WidgetSources.Apps,
+            params={
+                "take": 150,
+                "pageSize": 150,
+                "page": 1,
+                "skip": 0,
+                "sort[0][field]": "bytes_90s",
+                "sort[0][dir]": "desc",
+                "sort[1][field]": "bytes_total",
+                "sort[1][dir]": "desc",
+            },
+        ).json()
+        remainder = result["total"] - 150
+        result = result["data"]
+        if remainder > 0:
+            result += self.session.get(
+                Endpoints.WidgetSources.Apps,
+                params={
+                    "take": remainder,
+                    "pageSize": 150,
+                    "page": 1,
+                    "skip": 150,
+                    "sort[0][field]": "bytes_90s",
+                    "sort[0][dir]": "desc",
+                    "sort[1][field]": "bytes_total",
+                    "sort[1][dir]": "desc",
+                },
+            ).json()["data"]
+        return [
+            Models.Application(
+                name=x["name"],
+                session=self.session,
+                icon=x["icon_type"],
+                bytes_total=int(x["bytes_total"]),
+                bytes_last_90=int(x["bytes_90s"]),
+            )
+            for x in result
+        ]
