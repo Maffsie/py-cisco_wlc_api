@@ -17,3 +17,9 @@ WLC = CiscoWLCAPI(
 if __name__ == "__main__":
     for client in WLC.clients:
         print(f"{client.Hostname} = {client.IP4}")
+    c = WLC.clients[0]
+    c.refresh()
+    apps = c.apps
+    print(f"{c.Hostname}: {len(apps)} app(s)")
+    for app in apps:
+        print(f"{app.Name}: {app.BytesTotal}b")
