@@ -48,7 +48,9 @@ class Application:
     def __repr__(self):
         bytes_t = self.BytesTotal
         units = "b"
-        # TODO: This is really gross lmfao
+        # i looked on stackoverflow for better ways of doing this
+        #  and everything was more complicated
+        #  so fuck that
         if bytes_t >= 1024:
             bytes_t /= 1024
             units = "kb"
