@@ -10,7 +10,6 @@ from cachetools.func import ttl_cache
 # pylint: disable=relative-beyond-top-level
 from . import Endpoints, Exceptions
 from .Core import CiscoWLCAPISession
-from .Exceptions import NoPropertyError
 
 
 class Application:
@@ -21,6 +20,7 @@ class Application:
         self,
         name: str,
         bytes_total: int,
+        session: CiscoWLCAPISession,
         mac_address: str = None,
         icon: str = None,
         bytes_last_90: int = None,
@@ -30,6 +30,12 @@ class Application:
         self.BytesTotal = bytes_total
         self.BytesRecently = bytes_last_90
         self.MAC = mac_address
+        self._session = session
+
+        self._last = {
+            "client_apps": None,
+            "network_apps": None,
+        }
 
     def __add__(self, other):
         return self.BytesTotal + other.BytesTotal
@@ -60,10 +66,50 @@ class Application:
             f"recent={self.BytesRecently if self.BytesRecently is not None else '[no data]'}b)>"
         )
 
+    @ttl_cache(ttl=60)
     def refresh(self):
         """Refreshes the Application data if possible"""
         if self.MAC is None:
-            raise NoPropertyError("Application object does not have a MAC address")
+            self._refresh_global_app()
+        else:
+            self._refresh_client_app()
+
+    @ttl_cache(ttl=60)
+    def _refresh_client_app(self):
+        self._last["client_apps"] = self._session.get(
+            Endpoints.Clients.Client.Apps,
+            params={
+                "deviceMacAddress": self.MAC,
+                "take": 1,
+                "pageSize": 1,
+                "page": 1,
+                "skip": 0,
+                "sort[0][field]": "bytes_total",
+                "sort[0][dir]": "desc",
+                "filter[logic]": "and",
+                "filter[filters][0][field]": "name",
+                "filter[filters][0][operator]": "eq",
+                "filter[filters][0][value]": self.Name,
+            },
+        ).json()["data"]
+
+    @ttl_cache(ttl=60)
+    def _refresh_global_app(self):
+        self._last["network_apps"] = self._session.get(
+            Endpoints.WidgetSources.Apps,
+            params={
+                "take": 1,
+                "pageSize": 1,
+                "page": 1,
+                "skip": 0,
+                "sort[0][field]": "bytes_total",
+                "sort[0][dir]": "desc",
+                "filter[logic]": "and",
+                "filter[filters][0][field]": "name",
+                "filter[filters][0][operator]": "eq",
+                "filter[filters][0][value]": self.Name,
+            },
+        ).json()["data"]
 
 
 class Client:
@@ -274,6 +320,11 @@ class Client:
         apps = []
         for app in self._last["apps"]:
             apps.append(
-                Application(name=app["name"], bytes_total=int(app["bytes_total"]))
+                Application(
+                    name=app["name"],
+                    bytes_total=int(app["bytes_total"]),
+                    session=self._session,
+                    mac_address=self.MAC,
+                )
             )
         return apps
