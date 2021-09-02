@@ -33,8 +33,8 @@ class Application:
         self._session = session
 
         self._last = {
-            "client_apps": None,
-            "network_apps": None,
+            "client_apps": {},
+            "network_apps": {},
         }
 
     def __add__(self, other):
@@ -76,6 +76,8 @@ class Application:
 
     @ttl_cache(ttl=60)
     def _refresh_client_app(self):
+        # This query isn't filtered serverside; Cisco just..didn't write the code to
+        #  do the filtering.
         self._last["client_apps"] = self._session.get(
             Endpoints.Clients.Client.Apps,
             params={
@@ -86,12 +88,18 @@ class Application:
                 "skip": 0,
                 "sort[0][field]": "bytes_total",
                 "sort[0][dir]": "desc",
-                "filter[logic]": "and",
-                "filter[filters][0][field]": "name",
-                "filter[filters][0][operator]": "eq",
-                "filter[filters][0][value]": self.Name,
             },
         ).json()["data"]
+        self._last["client_apps"] = list(
+            filter(lambda app: app["name"] == self.Name, self._last["client_apps"])
+        )
+        if len(self._last["client_apps"]) != 1:
+            raise Exceptions.UnexpectedResponseValueError(
+                "Expected one result in client_apps refresh, but got"
+                f"{len(self._last['client_apps'])} instead"
+            )
+        self._last["client_apps"] = self._last["client_apps"][0]
+        self.BytesTotal = self._last["client_apps"].get("bytes_total", self.BytesTotal)
 
     @ttl_cache(ttl=60)
     def _refresh_global_app(self):
@@ -110,6 +118,16 @@ class Application:
                 "filter[filters][0][value]": self.Name,
             },
         ).json()["data"]
+        if len(self._last["network_apps"]) != 1:
+            raise Exceptions.UnexpectedResponseValueError(
+                "Expected one result in network_apps refresh, but got"
+                f"{len(self._last['network_apps'])} instead"
+            )
+        self._last["network_apps"] = self._last["network_apps"][0]
+        self.BytesTotal = self._last["network_apps"].get("bytes_total", self.BytesTotal)
+        self.BytesRecently = self._last["network_apps"].get(
+            "bytes_90s", self.BytesRecently
+        )
 
 
 class Client:

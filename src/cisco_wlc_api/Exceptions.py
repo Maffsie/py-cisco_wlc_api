@@ -42,6 +42,10 @@ class UnexpectedResponseStatusError(WLCRequestException):
     """Error raised when a request returns an unexpected response code"""
 
 
+class UnexpectedResponseValueError(WLCRequestException):
+    """Error raised when a request returns an unexpected body"""
+
+
 class NotLoggedInError(WLCSessionException):
     """Error raised when a login attempt has yet to be made"""
 
