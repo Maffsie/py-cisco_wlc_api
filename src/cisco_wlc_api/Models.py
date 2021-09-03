@@ -92,15 +92,15 @@ class Application:
                 "sort[0][dir]": "desc",
             },
         ).json()["data"]
-        self._last["client_apps"] = list(
+        filt = list(
             filter(lambda app: app["name"] == self.Name, self._last["client_apps"])
         )
-        if len(self._last["client_apps"]) != 1:
+        if len(filt) != 1:
             raise Exceptions.UnexpectedResponseValueError(
                 "Expected one result in client_apps refresh, but got"
-                f"{len(self._last['client_apps'])} instead"
+                f"{len(filt)} instead"
             )
-        self._last["client_apps"] = self._last["client_apps"][0]
+        self._last["client_apps"] = filt[0]
         self.BytesTotal = self._last["client_apps"].get("bytes_total", self.BytesTotal)
 
     @ttl_cache(ttl=60)
